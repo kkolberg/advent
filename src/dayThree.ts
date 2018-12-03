@@ -8,7 +8,9 @@ export interface FabricInput {
     width: number;
     height: number;
 }
-
+//part one 109785
+//         109785
+//part two 504
 export class Fabric {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
 
@@ -56,26 +58,18 @@ export class Fabric {
         }, 0);
     }
 
-    public static buildSheet = (): string[][] => {
-        let sheet = [];
-        for (let i = 0; i < 1000; i++) {
-            let row = [];
-            for (let i = 0; i < 1000; i++) {
-                row.push('.');
-            }
-            sheet.push(row);
-        }
 
-        return sheet;
-    }
     public static buildClaims = (claims: FabricInput[]): string[][] => {
-        let sheet = Fabric.buildSheet();
+        let sheet: string[][] = [];
 
         claims.forEach((claim) => {
 
             for (let h = 0; h < claim.height; h++) {
                 for (let w = 0; w < claim.width; w++) {
-                    if (sheet[h + claim.y][w + claim.x] === '.') {
+                    if (!sheet[h + claim.y]) {
+                        sheet[h + claim.y] = [];
+                    }
+                    if (!sheet[h + claim.y][w + claim.x]) {
                         sheet[h + claim.y][w + claim.x] = claim.id;
                         continue;
                     }
