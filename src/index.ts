@@ -1,3 +1,3 @@
-import { Fabric } from './dayThree';
+import { Guards } from './dayFour';
 
-Fabric.findNoOverlap().then((result) => console.log(result));
+Guards.findSleepMethodTwo().then((result) => console.log(result));
