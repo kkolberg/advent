@@ -1,5 +1,7 @@
 import * as bluebird from 'bluebird';
 
+
+//dummy, why didnt i just use a freaking stack?
 export class Polymers {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
 
