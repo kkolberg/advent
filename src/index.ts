@@ -1,3 +1,3 @@
-import { Guards } from './dayFour';
+import { Polymers } from './dayFive';
 
-Guards.findSleepMethodTwo().then((result) => console.log(result));
+Polymers.bestPolymer().then((result) => console.log(result));
