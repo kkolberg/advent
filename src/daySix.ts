@@ -1,4 +1,5 @@
 import * as bluebird from 'bluebird';
+import moment from 'moment';
 
 export interface Place {
     x: number;
@@ -14,6 +15,7 @@ export class GridPlaces {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
 
     public static getLargestWithinArea = async (): Promise<number> => {
+        let starttime = moment();
         let places = await GridPlaces.getCleaned();
 
         let maxX = GridPlaces.getMaxAxis(places, "x") + 1;
@@ -36,11 +38,13 @@ export class GridPlaces {
                 }
             }
         }
-
+        let endtime = moment();
+        console.log("time took: " + endtime.diff(starttime, "milliseconds").toString());
         return safeSpots;
     }
 
     public static getLargestArea = async (): Promise<number> => {
+        let starttime = moment();
         let map = await GridPlaces.drawMap();
 
         let toFile = map.map((x) => x.join(' ')).join('\n');
@@ -75,6 +79,8 @@ export class GridPlaces {
             return c[1] > max[1] ? c : max;
         }, ["", 0]);
         console.log("id: " + max[0] + "   area: " + max[1]);
+        let endtime = moment();
+        console.log("time took: " + endtime.diff(starttime, "milliseconds").toString());
         return max[1];
     }
 
