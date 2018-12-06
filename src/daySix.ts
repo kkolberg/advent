@@ -12,6 +12,34 @@ export interface Info {
 }
 export class GridPlaces {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
+
+    public static getLargestWithinArea = async (): Promise<number> => {
+        let places = await GridPlaces.getCleaned();
+
+        let maxX = GridPlaces.getMaxAxis(places, "x") + 1;
+        let maxY = GridPlaces.getMaxAxis(places, "y") + 1;
+        let safeSpots = 0;
+        for (let y = 0; y <= maxY; y++) {
+            for (let x = 0; x <= maxX; x++) {
+                let here: Place = { x, y, id: -1 };
+                let distances = places.map((p) => {
+                    let dist = GridPlaces.calculateDistance(here, p);
+                    return dist;
+                });
+
+                let total = distances.reduce((sum, c) => {
+                    return sum + c;
+                }, 0);
+
+                if (total < 10000) {
+                    safeSpots++;
+                }
+            }
+        }
+
+        return safeSpots;
+    }
+
     public static getLargestArea = async (): Promise<number> => {
         let map = await GridPlaces.drawMap();
 
@@ -19,15 +47,27 @@ export class GridPlaces {
         await GridPlaces.fs.writeFileAsync("input/daySixMap.txt", toFile);
 
         let areas: { [id: string]: number } = {};
-        map.forEach((ys) => {
+        map.forEach((ys, yI) => {
             ys.forEach((xs, xI) => {
+                if (xs === '.') {
+                    return;
+                }
                 if (!areas.hasOwnProperty(xs)) {
                     areas[xs] = 0;
                 }
-                areas[xs]++;
-                if (xI === ys.length - 1) {
-                    areas[xs] = -1;
+                if (areas[xs] === -1) {
+                    return;
                 }
+                if (xI === ys.length - 1 || xI === 0) {
+                    areas[xs] = -1;
+                    return;
+                }
+                if (yI === map.length - 1 || yI === 0) {
+                    areas[xs] = -1;
+                    return;
+                }
+
+                areas[xs]++;
             });
         });
 
@@ -42,7 +82,7 @@ export class GridPlaces {
         let places = await GridPlaces.getCleaned();
 
         let maxX = GridPlaces.getMaxAxis(places, "x") + 1;
-        let maxY = GridPlaces.getMaxAxis(places, "y");
+        let maxY = GridPlaces.getMaxAxis(places, "y") + 1;
         let plots: string[][] = [];
         for (let y = 0; y <= maxY; y++) {
             for (let x = 0; x <= maxX; x++) {
