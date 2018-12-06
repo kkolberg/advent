@@ -1,3 +1,3 @@
-import { Polymers } from './dayFive';
+import { GridPlaces } from './daySix';
 
-Polymers.bestPolymer().then((result) => console.log(result));
+GridPlaces.getLargestArea().then((result) => console.log(result));
