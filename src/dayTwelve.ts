@@ -21,23 +21,23 @@ export class Plots {
     public static addPlots = async (): Promise<number> => {
         await Plots.getData();
 
+        let next: Plot[] = Plots.current.map((x) => x);
         for (let g = 0; g < 21; g++) {
             let string = "";
             Plots.current.forEach((x) => {
                 string += x.value;
-
             });
             console.log(string);
-            let next: Plot[] = [];
             for (let p = 0; p < Plots.current.length; p++) {
 
                 let foundPat = null;
                 for (let x = 0; x < Plots.patterns.length; x++) {
 
                     //console.log("x: " + x.toString() + " p: " + p.toString() + " g: " + g.toString());
+
                     let pat = Plots.patterns[x];
-                    let rr = Plots.current[p - 2] ? Plots.current[p - 1].value : '.';
-                    let r = Plots.current[p - 2] ? Plots.current[p - 1].value : '.';
+                    let rr = next[p - 2] ? Plots.current[p - 2].value : '.';
+                    let r = Plots.current[p - 1] ? Plots.current[p - 1].value : '.';
                     let c = Plots.current[p] ? Plots.current[p].value : '.';
                     let l = Plots.current[p + 1] ? Plots.current[p + 1].value : '.';
                     let ll = Plots.current[p + 2] ? Plots.current[p + 2].value : '.';
@@ -59,19 +59,15 @@ export class Plots {
                         continue;
                     }
                     foundPat = pat;
+
+                    next[p] = {
+                        index: Plots.current[p].index,
+                        value: foundPat.result
+                    };
                     break;
                 }
-
-                if (!foundPat) {
-                    next.push(Plots.current[p]);
-                    continue;
-                }
-                next.push({
-                    index: Plots.current[p].index,
-                    value: foundPat.result
-                });
             }
-            Plots.current = next;
+            Plots.current = next.map((x) => x);
 
         }
 
@@ -116,30 +112,16 @@ export class Plots {
             })
         });
 
-        Plots.current.unshift({
-            value: '.',
-            index: -1
-        });
-        Plots.current.unshift({
-            value: '.',
-            index: -2
-        });
-        Plots.current.unshift({
-            value: '.',
-            index: -3
-        });
-        Plots.current.push({
-            value: '.',
-            index: Plots.initalState.length
-        });
-        Plots.current.push({
-            value: '.',
-            index: Plots.initalState.length + 1
-        });
-        Plots.current.push({
-            value: '.',
-            index: Plots.initalState.length + 2
-        });
+        for (let i = 1; i < 300; i++) {
+            Plots.current.push({
+                value: '.',
+                index: Plots.initalState.length - 1
+            });
+            Plots.current.unshift({
+                value: '.',
+                index: i * -1
+            });
+        }
     }
 
 }
