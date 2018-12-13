@@ -1,83 +1,87 @@
 import * as bluebird from 'bluebird';
 
 export interface Pattern {
-    pattern: string[];
+    pattern: string;
     result: string;
 }
 
-export interface Plot {
-    value: string;
-    index: number;
-}
 export class Plots {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
 
-    public static initalState: string[] = [];
-    public static patterns: Pattern[] = [];
+    public static initalState: string;
+    public static patterns: { [id: string]: string } = {};
 
-    public static current: Plot[] = [];
+    public static bob = async (): Promise<number> => {
 
-
+        let sum = 5335;
+        for (let i = 160; i < 0; i++) {
+            sum += 33;
+        }
+        return sum;
+    }
     public static addPlots = async (): Promise<number> => {
+
         await Plots.getData();
+        let zero = 0;
+        let current = Plots.initalState;
 
-        let next: Plot[] = Plots.current.map((x) => x);
-        for (let g = 0; g < 21; g++) {
-            let string = "";
-            Plots.current.forEach((x) => {
-                string += x.value;
-            });
-            console.log(string);
-            for (let p = 0; p < Plots.current.length; p++) {
-
-                let foundPat = null;
-                for (let x = 0; x < Plots.patterns.length; x++) {
-
-                    //console.log("x: " + x.toString() + " p: " + p.toString() + " g: " + g.toString());
-
-                    let pat = Plots.patterns[x];
-                    let rr = next[p - 2] ? Plots.current[p - 2].value : '.';
-                    let r = Plots.current[p - 1] ? Plots.current[p - 1].value : '.';
-                    let c = Plots.current[p] ? Plots.current[p].value : '.';
-                    let l = Plots.current[p + 1] ? Plots.current[p + 1].value : '.';
-                    let ll = Plots.current[p + 2] ? Plots.current[p + 2].value : '.';
-                    if (pat.pattern[0] !== rr) {
-                        continue;
-                    }
-                    if (pat.pattern[1] !== r) {
-                        continue;
-                    }
-                    if (pat.pattern[2] !== c) {
-                        continue;
-                    }
-
-                    if (pat.pattern[3] !== l) {
-                        continue;
-                    }
-
-                    if (pat.pattern[4] !== ll) {
-                        continue;
-                    }
-                    foundPat = pat;
-
-                    next[p] = {
-                        index: Plots.current[p].index,
-                        value: foundPat.result
-                    };
-                    break;
+        let tree = 0;
+        let dStarting = "".padStart(5, ".");
+        let found: { [id: string]: string } = {};
+        let lastSum = 0;
+        current = "".padStart(100, ".") + current;
+        zero = 100;
+        console.log(current.substring(0, current.lastIndexOf("#") + 1));
+        for (let g = 0; g < 20; g++) {
+            let next: string[] = [];
+            while (!current.endsWith("...")) {
+                current = current + ".";
+            }
+            let ll = current.length;
+            let dummy = "".padStart(current.length, ".");
+            next = dummy.split('');
+            for (let p = 0; p < ll; p++) {
+                if (p > current.length - 5) {
+                    current = current.padEnd(current.length + 5, ".");
+                }
+                let part = current.substr(p, 5);
+                if (Plots.patterns[part]) {
+                    next[p + 2] = Plots.patterns[part];
+                } else {
+                    next[p + 2] = ".";
                 }
             }
-            Plots.current = next.map((x) => x);
+
+            let cat = next.join("");
+
+
+            found[current.substring(current.indexOf("#"), current.lastIndexOf("#") + 1)] = "cat";
+            current = cat;
+            // if (g % 1000 === 0) {
+
+            // }
 
         }
-
+        console.log();
+        console.log(current);
+        console.log(current.length);
+        console.log(tree);
         let sum = 0;
-        Plots.current.forEach((x) => {
-            if (x.value === "#") {
-                sum += x.index;
-            }
-        });
+        console.log(zero);
 
+
+        for (let i = 0; i < current.length; i++) {
+            if (i < zero && current[i] === "#") {
+                sum -= zero - i;
+                continue;
+            }
+            if (i === zero) {
+                continue;
+            }
+            if (current[i] === "#") {
+                sum += i - zero;
+            }
+        }
         return sum;
     }
 
@@ -88,7 +92,7 @@ export class Plots {
         rows.forEach((row) => {
             if (row.indexOf("initial state: ") > -1) {
                 row = row.replace("initial state: ", "");
-                Plots.initalState = row.split('');
+                Plots.initalState = row;
                 return;
             }
 
@@ -98,30 +102,8 @@ export class Plots {
 
             let parts = row.split(" => ");
 
-            Plots.patterns.push({
-                result: parts[1],
-                pattern: parts[0].split('')
-            });
-
+            Plots.patterns[parts[0]] = parts[1];
         });
-
-        Plots.initalState.forEach((v, i) => {
-            Plots.current.push({
-                value: v,
-                index: i
-            })
-        });
-
-        for (let i = 1; i < 300; i++) {
-            Plots.current.push({
-                value: '.',
-                index: Plots.initalState.length - 1
-            });
-            Plots.current.unshift({
-                value: '.',
-                index: i * -1
-            });
-        }
     }
 
 }
