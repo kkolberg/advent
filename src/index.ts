@@ -1,9 +1,9 @@
 import moment from 'moment';
 
-import { Plots } from './dayTwelve';
+import { Mine } from './dayThirteen';
 
 let starttime = moment();
-Plots.addPlots().then((result) => {
+Mine.findCrash().then((result) => {
     let endtime = moment();
     console.log("time took: (milliseconds) " + endtime.diff(starttime, "milliseconds").toString());
     console.log("time took: (seconds) " + endtime.diff(starttime, "seconds").toString());
