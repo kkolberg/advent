@@ -106,7 +106,7 @@ export class Mine {
 
                     delete Mine.cartDic[spot.cart.id.toString()];
                     let blah = mine[newY][newX].cart || { id: -1 };
-                    console.log("killing: " + spot.cart.id.toString() + " and " + blah.id);
+                    console.log("tick: " + tick.toString() + " killing: " + spot.cart.id.toString() + " and " + blah.id + " at " + newX.toString() + "," + newY.toString());
                     delete Mine.cartDic[blah.id.toString()];
                     mine[newY][newX].cart = null;
                     spot.cart = null;
