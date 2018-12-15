@@ -10,7 +10,8 @@ export class Drinks {
 
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
     public static End = 919901;
-    public static EndTwo = "51589";
+    public static EndTwo = "919901";
+
 
     public static runTwo = async (): Promise<string> => {
 
@@ -38,22 +39,68 @@ export class Drinks {
         let two = first.next;
         let bob = "";
 
-        while (bob.indexOf(Drinks.EndTwo) < 0) {
+
+
+        let founds: Drink = {
+            score: 3,
+            elfOne: false,
+            elfTwo: false,
+            next: {} as any
+
+        };
+
+        let foundsLast: Drink = {
+            score: 7,
+            next: {} as any,
+            elfOne: false,
+            elfTwo: false,
+        };
+
+        founds.next = foundsLast;
+        let c = false;
+        while (!c) {
 
             let sum = e1 + e2;
             let parts = sum.toString().split("");
-            parts.forEach((v) => {
+
+            for (let v of parts) {
                 let n: Drink = {
                     score: Number(v),
                     next: first,
                     elfOne: false,
                     elfTwo: false
                 };
+
                 last.next = n;
                 last = n;
                 len++;
-                bob += v;
-            });
+                foundsLast.next = {
+                    score: Number(v),
+                    next: null as any,
+                    elfOne: false,
+                    elfTwo: false
+                };
+                foundsLast = foundsLast.next;
+                let b = founds;
+                let s = "";
+                while (b) {
+                    s += b.score;
+                    b = b.next;
+                }
+
+                if (s.indexOf(Drinks.EndTwo) > -1) {
+                    c = true;
+                    break;
+                }
+
+                if (s.length > Drinks.EndTwo.length) {
+                    founds = founds.next;
+                }
+
+            }
+            if (c) {
+                break;
+            }
 
             let oneToMove = e1 + 1;
             while (oneToMove > 0) {
@@ -72,14 +119,21 @@ export class Drinks {
                 e2 = two.score;
             }
 
-
             if (len % 10000 === 0) {
                 console.log(len.toString());
             }
         }
+        let s = "";
+        let pr = first;
+        let f = Drinks.End - 1;
 
+        // for (let i = 0; i < len; i++) {
+
+        // }
+        len = len - Drinks.EndTwo.length;
         return len.toString();
     }
+
     public static run = async (): Promise<string> => {
 
         let first: Drink = {
