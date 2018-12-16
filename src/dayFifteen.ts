@@ -19,10 +19,12 @@ export class DnD {
         DnD.Mine = await DnD.getMine();
         let stopFight = false;
         let round = 0;
+        let roundTwo = 0;
         let final = "";
         let hadFight = false;
         while (!stopFight) {
             round++;
+            roundTwo++;
             stopFight = true;
             DnD.Creatures.sort(DnD.sort);
 
@@ -84,7 +86,7 @@ export class DnD {
                     }
                 }));
 
-                if (bestE) {
+                if (bestE && bestPath.length > 1) {
                     let neighbors = DnD.getOptions(c.location, {} as any);
                     let possibles: Spot[][] = neighbors.map((x) => DnD.getPath({
                         type: c.type,
@@ -136,7 +138,7 @@ export class DnD {
 
             DnD.Creatures = DnD.Creatures.filter((c) => {
                 if (c.hp > 0) {
-                    console.log("id: " + c.id.toString() + " hp: " + c.hp.toString());
+
                     return true;
                 }
                 return false;
@@ -144,7 +146,7 @@ export class DnD {
 
             final += DnD.print(round) + "\n";
 
-            console.log(round);
+
         }
         await DnD.fs.writeFileAsync("input/dndMap.txt", final);
 
@@ -152,6 +154,7 @@ export class DnD {
         let hp = DnD.Creatures.reduce((p, c) => {
             return p + c.hp;
         }, 0);
+        console.log("roundTwo=====" + roundTwo.toString());
         console.log("round: " + (round).toString() + " hp: " + hp.toString());
         let bob = ["round: " + (round).toString() + " hp: " + hp.toString() + " score: " + ((round) * (hp)).toString() + " winner: " + DnD.Creatures[0].type];
         bob.push("round: " + (round - 1).toString() + " hp: " + hp.toString() + " score: " + ((round - 1) * (hp)).toString() + " winner: " + DnD.Creatures[0].type);

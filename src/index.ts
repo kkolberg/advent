@@ -1,9 +1,9 @@
 import moment from 'moment';
 
-import { Assembly } from './daySixteen';
+import { DnD } from './dayFifteen';
 
 let starttime = moment();
-Assembly.run().then((result) => {
+DnD.run().then((result) => {
     let endtime = moment();
     console.log("time took: (milliseconds) " + endtime.diff(starttime, "milliseconds").toString());
     console.log("time took: (seconds) " + endtime.diff(starttime, "seconds").toString());
