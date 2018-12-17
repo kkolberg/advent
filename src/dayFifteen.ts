@@ -1,5 +1,7 @@
 import * as bluebird from 'bluebird';
 
+import { Mine } from './dayThirteen';
+
 const AStar = require('a-star');
 export interface Spot { x: number; y: number; }
 export interface Creature {
@@ -12,180 +14,195 @@ export interface Creature {
 
 export class DnD {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
-    public static Creatures: Creature[] = [];
+    public static Creatures: { [id: string]: Creature } = {};
     public static Mine: string[][] = [];
 
     public static run = async (): Promise<string> => {
         DnD.Mine = await DnD.getMine();
-        let stopFight = false;
-        let round = 0;
-        let roundTwo = 0;
         let final = "";
-        let hadFight = false;
-        while (!stopFight) {
+        let round = 0;
+        let stop = false;
+        while (!stop && round < 30) {
             round++;
-            roundTwo++;
-            stopFight = true;
-            DnD.Creatures.sort(DnD.sort);
 
+            for (let y = 0; y < DnD.Mine.length; y++) {
+                for (let x = 0; x < DnD.Mine[y].length; x++) {
+                    if (["", "#", "."].indexOf(DnD.Mine[y][x]) > -1) {
+                        continue;
+                    }
+                    let c = DnD.Creatures[DnD.Mine[y][x]];
+                    if (c.hp < 1) {
+                        DnD.Mine[y][x] = '.';
+                        delete DnD.Creatures[c.id];
+                    }
 
-            let changes: { location: Spot, c: Creature }[] = [];
-            let fight = false;
-            for (let c of DnD.Creatures) {
-                if (c.hp < 1) {
-                    continue;
+                    if (c.round === round) {
+                        continue;
+                    }
+
+                    c.round = round;
+
+                    let ids = DnD.FindEnemies(c);
+                    if (ids.length === 0) {
+                        stop = true;
+                        break;
+                    }
+
+                    let bestStep = null as any;
+                    let bestE: Creature = null as any;
+                    let bestDistance = Number.MAX_SAFE_INTEGER;
+                    ids.forEach((e) => {
+                        let newE = DnD.Creatures[e];
+                        let paths = DnD.getPath(c, newE);
+                        if (paths.distance < 0) {
+                            return;
+                        }
+
+                        let best = paths.paths.sort(DnD.sort)[0];
+
+                        if (!bestE || paths.distance < bestDistance) {
+                            bestE = newE;
+                            bestStep = best;
+                            bestDistance = paths.distance;
+                            return;
+                        }
+                        if (bestDistance === paths.distance) {
+                            if (newE.hp < bestE.hp) {
+                                bestE = newE;
+                                bestStep = best;
+                                bestDistance = paths.distance;
+
+                            }
+                            return;
+                        }
+                        if (paths.distance !== bestDistance || newE.location.y > bestE.location.y) {
+                            return;
+                        }
+                        if (newE.location.y < bestE.location.y) {
+                            bestE = newE;
+                            bestStep = best;
+                            bestDistance = paths.distance;
+                            return;
+                        }
+                        if (newE.location.x < bestE.location.x) {
+                            bestE = newE;
+                            bestStep = best;
+                            bestDistance = paths.distance;
+                            return;
+                        }
+                    });
+
+                    if (!bestE) {
+                        continue;
+                    }
+
+                    if (bestStep && bestDistance > 0) {
+                        DnD.Mine[y][x] = '.';
+                        DnD.Mine[bestStep.y][bestStep.x] = c.id.toString();
+                        c.location = bestStep;
+                    }
+
+                    if (bestDistance < 2) {
+                        DnD.Creatures[bestE.id].hp -= 3;
+                        if (DnD.Creatures[bestE.id].hp < 1) {
+                            DnD.Mine[bestE.location.y][bestE.location.x] = '.';
+                            delete DnD.Creatures[bestE.id.toString()];
+                        }
+                    }
                 }
-                let enemies = DnD.FindEnemies(c);
-                if (!enemies.length) {
-                    stopFight = true;
-                    round--;
+
+                if (stop) {
                     break;
                 }
-                stopFight = false;
-                c.round = round;
-                let bestE: Creature = null as any;
-                let bestPath: Spot[] = [];
-                enemies.forEach((e => {
-                    if (e.hp < 1) {
-                        return;
-                    }
-                    let path = DnD.getPath(c, e);
-
-                    if (path.status !== "success") {
-                        return;
-                    }
-                    path = path.path.filter((p: Spot) => {
-                        return p.x !== c.location.x || p.y !== c.location.y;
-                    });
-                    if (!bestE || path.length < bestPath.length) {
-                        bestE = e;
-                        bestPath = path;
-                        return;
-                    }
-                    if (path.length < bestPath.length) {
-                        bestE = e;
-                        bestPath = path;
-                        return;
-                    }
-                    if (path.length === bestPath.length) {
-                        if (e.hp < bestE.hp) {
-                            bestE = e;
-                            bestPath = path;
-                            return;
-                        }
-                        if (e.location.y < bestE.location.y) {
-                            bestE = e;
-                            bestPath = path;
-                            return;
-                        }
-                        if (e.location.y === bestE.location.y && e.location.x < bestE.location.x) {
-                            bestE = e;
-                            bestPath = path;
-                            return;
-                        }
-                    }
-                }));
-
-                if (bestE && bestPath.length > 1) {
-                    let neighbors = DnD.getOptions(c.location, {} as any);
-                    let possibles: Spot[][] = neighbors.map((x) => DnD.getPath({
-                        type: c.type,
-                        location: x
-                    } as any, bestE)).filter((p) => {
-                        return p.status === "success";
-                    }).map((p) => p.path);
-
-                    let shortest = possibles.reduce((s, path) => {
-                        return path.length < s ? path.length : s;
-                    }, Number.MAX_SAFE_INTEGER);
-
-                    possibles = possibles.filter((x) => {
-                        return x.length <= shortest;
-                    });
-                    if (possibles.length > 1) {
-                        possibles.sort((a, b) => DnD.sort(a[0], b[0]));
-                        bestPath = possibles.shift() as any;
-                    }
-                }
-
-                if (bestPath.length > 1) {
-                    // changes.push({
-                    //     location: bestPath[0],
-                    //     c
-                    // });
-                    DnD.Mine[c.location.y][c.location.x] = ".";
-                    c.location = bestPath[0];
-                    DnD.Mine[bestPath[0].y][bestPath[0].x] = c.type;
-                    bestPath.shift();
-
-                }
-                if (bestPath.length === 1 && bestE) {
-                    bestE.hp -= 3;
-                    fight = true;
-                    if (bestE.hp < 1) {
-                        DnD.Mine[bestE.location.y][bestE.location.x] = ".";
-                    }
-                }
-                hadFight = fight;
             }
 
-            // changes.forEach((change) => {
-            //     DnD.Mine[change.c.location.y][change.c.location.x] = ".";
-            //     change.c.location = change.location;
-            //     DnD.Mine[change.location.y][change.location.x] = change.c.type;
-            //     change.c.location = change.location;
-            // });
-
-            DnD.Creatures = DnD.Creatures.filter((c) => {
-                if (c.hp > 0) {
-
-                    return true;
-                }
-                return false;
-            });
+            DnD.killDead();
+            let types = new Set();
+            Object.entries(DnD.Creatures).forEach((c) => types.add(c[1].type));
+            if ([...types].length === 1) {
+                stop = true;
+            }
 
             final += DnD.print(round) + "\n";
-
-
         }
+
         await DnD.fs.writeFileAsync("input/dndMap.txt", final);
-
-
-        let hp = DnD.Creatures.reduce((p, c) => {
-            return p + c.hp;
-        }, 0);
-        console.log("roundTwo=====" + roundTwo.toString());
-        console.log("round: " + (round).toString() + " hp: " + hp.toString());
-        let bob = ["round: " + (round).toString() + " hp: " + hp.toString() + " score: " + ((round) * (hp)).toString() + " winner: " + DnD.Creatures[0].type];
-        bob.push("round: " + (round - 1).toString() + " hp: " + hp.toString() + " score: " + ((round - 1) * (hp)).toString() + " winner: " + DnD.Creatures[0].type);
-        return bob.join('\n');
+        let hp = Object.entries(DnD.Creatures).reduce((sum, x) => sum + x[1].hp, 0);
+        round--;
+        console.log("round: " + round.toString() + " hp: " + hp.toString());
+        return (round * hp).toString();
     }
 
-    public static getPath = (c: Creature, e: Creature): any => {
-        let p = AStar({
-            start: c.location,
-            isEnd: (s: Spot) => s.x === e.location.x && s.y === e.location.y,
-            neighbor: (s: Spot) => {
-                return DnD.getOptions(s, e.location);
-            },
-            distance: (s1: Spot, s2: Spot) => Math.abs(s1.x - s2.x) + Math.abs(s1.y - s2.y),
-            heuristic: (s: Spot) => Math.abs(s.x - e.location.x) + Math.abs(s.y - e.location.y),
-            hash: (s: Spot) => s.x + "," + s.y
+    public static killDead = (): void => {
+        let ids = Object.keys(DnD.Creatures).filter((key) => {
+            return DnD.Creatures[key].hp < 1;
         });
 
-        return p;
+        ids.forEach((key) => {
+            delete DnD.Creatures[key];
+        })
+    }
+
+    public static getPath = (c: Creature, e: Creature): { distance: number, paths: Spot[] } => {
+        let mine = DnD.Mine.map((y) => {
+            return y.map((x) => {
+                return x;
+            })
+        });
+
+        let neighbors = DnD.getOptions(e.location, e.location, mine);
+        let step = 1;
+        while (neighbors.length > 0) {
+            neighbors.forEach((x) => {
+                mine[x.y][x.x] = step.toString();
+            });
+            let newN: Spot[] = [];
+            neighbors.forEach((x) => {
+                DnD.getOptions(x, x, mine).forEach((y) => newN.push(y));
+            });
+            neighbors = newN;
+            step++;
+        }
+        let best = -1;
+        let found: Spot[] = [];
+        neighbors = DnD.getRoutes(c.location, e.location, mine);
+        let actual = false;
+        neighbors.forEach((n) => {
+            let v = Number(mine[n.y][n.x]);
+            if (v === e.id) {
+                actual = true;
+            }
+            if (isNaN(v)) {
+                return;
+            }
+
+            if (best === -1 || v < best) {
+                best = v;
+            }
+            found.push(n);
+        });
+
+        if (actual) {
+            return {
+                distance: 0,
+                paths: []
+            };
+        }
+
+        found = found.filter((n) => mine[n.y][n.x] === best.toString());
+
+        return {
+            distance: best,
+            paths: found
+        };
     }
 
     public static FindNextStep = (npc: Creature, enemies: number[]) => {
-        let e = DnD.Creatures.filter((x) => enemies.indexOf(x.id) > -1);
 
-        for (let c of e) {
-
-        }
     }
 
-    public static FindEnemies = (npc: Creature): Creature[] => {
-        return DnD.Creatures.filter((e) => e.type !== npc.type);
+    public static FindEnemies = (npc: Creature): string[] => {
+        return Object.entries(DnD.Creatures).filter((e) => e[1].type !== npc.type).map((e) => e[0]);
     }
 
     public static sort = (a: Creature | { x: number, y: number }, b: Creature | { x: number, y: number }): number => {
@@ -199,7 +216,7 @@ export class DnD {
         return aLoc.x - bLoc.x;
     }
 
-    public static getOptions = (spot: Spot, target: Spot): Spot[] => {
+    public static getOptions = (spot: Spot, target: Spot, mine: string[][]): Spot[] => {
         let spots: Spot[] = [];
         let y = spot.y;
         let x = spot.x;
@@ -209,43 +226,97 @@ export class DnD {
         }
 
         //down
-        if (DnD.Mine[y + 1] && DnD.Mine[y + 1][x] === "." || match({ y: y + 1, x })) {
+        if (mine[y + 1] && (mine[y + 1][x] === "." || match({ y: y + 1, x }))) {
             spots.push({ x: x, y: y + 1 });
         }
 
         //right
-        if (DnD.Mine[y][x + 1] === "." || match({ y, x: x + 1 })) {
+        if (mine[y][x + 1] === "." || match({ y, x: x + 1 })) {
             spots.push({ x: x + 1, y: y });
         }
 
         //left
-        if (DnD.Mine[y][x - 1] === "." || match({ y, x: x - 1 })) {
+        if (mine[y][x - 1] === "." || match({ y, x: x - 1 })) {
             spots.push({ x: x - 1, y: y });
         }
 
         //up
-        if (DnD.Mine[y - 1] && DnD.Mine[y - 1][x] === "." || match({ y: y - 1, x })) {
+        if (mine[y - 1] && (mine[y - 1][x] === "." || match({ y: y - 1, x }))) {
             spots.push({ x: x, y: y - 1 });
         }
         return spots;
     }
 
+    public static getRoutes = (spot: Spot, target: Spot, mine: string[][]): Spot[] => {
+        let spots: Spot[] = [];
+        let y = spot.y;
+        let x = spot.x;
+
+        let match = (o: Spot) => {
+            return o.x === target.x && o.y === target.y;
+        }
+
+        //down
+        if (mine[y + 1] || match({ y: y + 1, x })) {
+            let b = Number(mine[y + 1][x]);
+            if (!isNaN(b) && b > -1) {
+                spots.push({ x: x, y: y + 1 });
+            }
+        }
+
+        //right
+        if (mine[y][x + 1] || match({ y, x: x + 1 })) {
+            let b = Number(mine[y][x + 1]);
+            if (!isNaN(b) && b > -1) {
+                spots.push({ x: x + 1, y: y });
+            }
+        }
+
+        //left
+        if (mine[y][x - 1] || match({ y, x: x - 1 })) {
+            let b = Number(mine[y][x - 1]);
+            if (!isNaN(b) && b >-1) {
+                spots.push({ x: x - 1, y: y });
+            }
+        }
+
+        //up
+        if (mine[y - 1] && (mine[y - 1][x] || match({ y: y - 1, x }))) {
+            let b = Number(mine[y - 1][x]);
+            if (!isNaN(b) && b > -1) {
+                spots.push({ x: x, y: y - 1 });
+            }
+        }
+        return spots;
+    }
+
+
     public static print = (round: number): string => {
         let out = DnD.Mine.map((y) => {
-            return y.join('');
+            let row = y.join('');
+            let hp: string[] = [];
+            Object.entries(DnD.Creatures).forEach((c) => {
+                if (row.indexOf(c[0]) > -1) {
+                    hp.push(c[1].type + "(" + c[1].hp.toString() + ")");
+                }
+                row = row.replace(c[0], c[1].type);
+            })
+            return row + "   " + hp.join(",");
         });
         let final = round.toString() + "\n" + out.join("\n");
+
         return final;
     }
 
     public static getMine = async (): Promise<string[][]> => {
         let raw: string = await DnD.fs.readFileAsync("input/dayFifteen.txt", { encoding: "utf8" });
         let cleaned = raw.split("\n");
-        let e = 0;
+        let e = -10;
         let map: string[][] = cleaned.map((row, y) => {
             let yv = row.split('');
             return yv.map((xv, x) => {
                 if (xv === "E" || xv === "G") {
+                    e--;
                     let c: Creature = {
                         hp: 200,
                         type: xv,
@@ -253,8 +324,8 @@ export class DnD {
                         round: 0,
                         location: { x: x, y }
                     };
-                    DnD.Creatures.push(c);
-                    e++;
+                    DnD.Creatures[e.toString()] = c;
+                    return e.toString();
                 }
                 return xv;
             });
