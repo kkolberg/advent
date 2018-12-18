@@ -16,6 +16,107 @@ export class DnD {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
     public static Creatures: Creature[] = [];
     public static Mine: string[][] = [];
+    public static attack = 23;
+    public static runBetter = async (): Promise<string> => {
+        DnD.Mine = await DnD.getMine();
+        let final = "";
+        let round = 0;
+        let stop = false;
+        let fullRound = true;
+
+        while (!stop && round < 50000) {
+            round++;
+            DnD.Creatures.sort(DnD.sort);
+            DnD.Creatures.forEach((c) => {
+                if (c.hp < 1) {
+                    DnD.Mine[c.location.y][c.location.x] = ".";
+                    return;
+                }
+
+                let enemySpots: { e: Creature, s: Spot }[] = [];
+                let enemies = DnD.FindEnemies(c);
+                if (enemies.length === 0) {
+                    fullRound = false;
+                }
+                enemies.forEach((e) => {
+                    DnD.getOptions(e.location, c.location, DnD.Mine).forEach((s) => enemySpots.push({ e, s }));
+                });
+
+                let options: { e: Creature, s: Spot, p: Spot, distance: number }[] = [];
+                enemySpots.forEach((es) => {
+                    let paths = DnD.getPath(c, es.s);
+                    if (paths.distance === -1) {
+                        return;
+                    }
+                    options.push({ e: es.e, s: es.s, p: paths.path, distance: paths.distance });
+                });
+
+                if (options.length === 0) {
+                    return;
+                }
+
+                options.sort((a, b) => {
+                    let d = a.distance - b.distance;
+                    if (d !== 0) {
+                        return d;
+                    }
+                    let y = a.s.y - b.s.y;
+                    if (y !== 0) {
+                        return y;
+                    }
+                    return a.s.x - b.s.x;
+                });
+
+                DnD.Mine[c.location.y][c.location.x] = ".";
+                c.location = options[0].p;
+                DnD.Mine[c.location.y][c.location.x] = c.type;
+
+                let targets: Creature[] = DnD.getTargets(c, DnD.Mine).map((t) => {
+                    return DnD.Creatures.find((e) => {
+                        return e.location.y === t.y && e.location.x === t.x;
+                    });
+                }).filter((e) => e) as Creature[];
+                if (targets.length === 0) {
+                    return;
+                }
+                targets.sort((a, b) => {
+                    let hp = a.hp - b.hp;
+                    if (hp !== 0) {
+                        return hp;
+                    }
+                    let y = a.location.y - b.location.y;
+                    if (y !== 0) {
+                        return y;
+                    }
+                    return a.location.x - b.location.x;
+
+                });
+
+                targets[0].hp -= (targets[0].type === "G" ? DnD.attack : 3);
+
+                if (targets[0].hp < 1) {
+                    DnD.Mine[targets[0].location.y][targets[0].location.x] = ".";
+                }
+            });
+
+            DnD.killDead();
+            let types = new Set();
+            Object.entries(DnD.Creatures).forEach((c) => types.add(c[1].type));
+            if ([...types].length === 1) {
+                stop = true;
+            }
+            console.log(round);
+            //   await DnD.fs.writeFileAsync("input/dnd/" + round, DnD.print(round));
+        }
+
+        await DnD.fs.writeFileAsync("input/dndMap.txt", DnD.print(round));
+        let hp = Object.entries(DnD.Creatures).reduce((sum, x) => sum + x[1].hp, 0);
+        if (!fullRound) {
+            round--;
+        }
+        console.log("round: " + round.toString() + " hp: " + hp.toString());
+        return (round * hp).toString();
+    }
 
     public static run = async (): Promise<string> => {
         DnD.Mine = await DnD.getMine();
@@ -131,6 +232,9 @@ export class DnD {
         DnD.Creatures = DnD.Creatures.filter((e) => {
             if (e.hp < 1) {
                 DnD.Mine[e.location.y][e.location.x] = ".";
+                if (e.type === "E") {
+                    throw new Error("Elf died");
+                }
             }
             return e.hp > 0;
         });
