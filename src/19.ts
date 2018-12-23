@@ -141,38 +141,41 @@ export class Assembly {
 
     public static run = async (): Promise<string> => {
         let input = await Assembly.getProgram();
-        let start = [1, 0, 0, 0, 0, 0];
+        let start = [0, 0, 0, 0, 0, 0];
         let ipReg = input.num;
         let ins = 0;
         let run = true;
         let c = 0;
         let oldFour = -1;
+        let commands = [];
+        let zero = 7129802;
+
+        start = [0, 0, 0, 0, 0, 0];
+        let t = [];
+        let bobs = new Set();
         while (run) {
             start[ipReg] = ins;
             let op = input.operations[ins].op;
-
-            // let blah = "ip=" + ins.toString() + " [" + start.join(" ") + "] ";
-            // blah += input.operations[ins].name + " " + input.operations[ins].vals.join(" ");
-
-            //console.log(start.join(" ") + "   " + input.operations[ins].name);
-
-            start = op(start, input.operations[ins].vals);
-            if (oldFour !== start[4]) {
-                console.log("c,ins: " + c.toString() + "," + (ins + 2).toString() + ":  " + input.operations[ins].name + " [" + input.operations[ins].vals.join(" ") + "]  -  " + " [" + start.join(" ") + "]");
-                oldFour = start[4];
+            if (ins === 28) {
+                //console.log(start.join(" "));
+                if (bobs.has(start[4].toString())) {
+                    console.log(start.join(" "));
+                    console.log(t[t.length - 1]);
+                    console.log(t[t.length - 2]);
+                    break;
+                }
+                t.push(start[4]);
+                bobs.add(start[4].toString());
             }
-            // blah += " [" + start.join(" ") + "]";
-            //console.log(start.join(" "));
+            start = op(start, input.operations[ins].vals);
+            oldFour = start[4];
+
             ins = start[ipReg];
             ins++;
             run = ins > -1 && ins < input.operations.length;
-            // await bluebird.Promise.delay(100);
-
             c++;
-
         }
-
-        return start.join(" ");
+        return "";
     }
 
     public static map: { [id: string]: (input: number[], vals: number[]) => number[] } = {
@@ -194,6 +197,40 @@ export class Assembly {
         "eqrr": Assembly.eqrr
     }
 
+    public static cat = async (): Promise<number> => {
+
+        let one = 0;
+        let two = 0;
+        let three = 0;
+        let four = 0;
+        let c = 0;
+        let zero = 0;
+        while (true) {
+            while (true) {
+                one = four | 65536;
+                four = 2024736;
+                two = one & 255;
+                four = four + two;
+                four = four & 16777215;
+                four = four * 65899;
+                four = four & 16777215;
+
+                if (256 > one) {
+                    continue;
+                }
+
+                break;
+            }
+
+            four = 2024736;
+
+            if (four === zero) {
+                break;
+            }
+        }
+        return c;
+    }
+
     public static tree = async (): Promise<number> => {
         let five = 10550400;
         let four = 0;
@@ -202,7 +239,8 @@ export class Assembly {
 
 
         while (one < 10551419) {
-            five = four * one;
+            if (10551418 / one)
+                five = four * one;
             if (five === 10551418) {
                 answer++;
             }
