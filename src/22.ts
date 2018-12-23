@@ -10,12 +10,13 @@ export interface Region {
 }
 export class Cave {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
-    public static Target = { x: 10, y: 10 };
+    public static Target = { x: 12, y: 763 };
+    // public static Target = { x: 10, y: 10 };
     public static Cave: Region[][] = [];
-    public static Depth: number = 510;
+    public static Depth: number = 7740;
 
     public static run = async (): Promise<string> => {
-        for (let y = 0; y < Cave.Target.y + 10; y++) {
+        for (let y = 0; y < Cave.Target.y + 1; y++) {
             Cave.Cave.push([{ geo: 0, type: "", erosion: 0, y, x: 0, risk: 0 }]);
             Cave.Cave[y][0].geo = Cave.GeoIndex(0, y);
             Cave.Cave[y][0].erosion = Cave.Erosion(0, y);
@@ -24,7 +25,7 @@ export class Cave {
         }
 
 
-        for (let x = 1; x < Cave.Target.x + 10; x++) {
+        for (let x = 1; x < Cave.Target.x + 1; x++) {
             Cave.Cave[0].push({ geo: 0, type: "", erosion: 0, x, y: 0, risk: 0 });
             Cave.Cave[0][x].geo = Cave.GeoIndex(x, 0);
             Cave.Cave[0][x].erosion = Cave.Erosion(x, 0);
@@ -33,14 +34,13 @@ export class Cave {
 
         }
 
-        for (let y = 1; y < Cave.Target.y + 10; y++) {
-            for (let x = 1; x < Cave.Target.x + 10; x++) {
+        for (let y = 1; y < Cave.Target.y + 1; y++) {
+            for (let x = 1; x < Cave.Target.x + 1; x++) {
                 Cave.Cave[y].push({ geo: 0, type: "", erosion: 0, x, y, risk: 0 });
                 Cave.Cave[y][x].geo = Cave.GeoIndex(x, y);
                 Cave.Cave[y][x].erosion = Cave.Erosion(x, y);
                 Cave.Cave[y][x].type = Cave.RegionType(x, y);
                 Cave.Cave[y][x].risk = Cave.Risk(x, y);
-
             }
         }
         Cave.fs.writeFileAsync("input/Cave.txt", Cave.Cave.map((x) => x.map((xx) => {
@@ -51,13 +51,6 @@ export class Cave {
             if (xx.x === Cave.Target.x && xx.y === Cave.Target.y) {
                 return "T";
             }
-
-            if (xx.x > 10) {
-                return;
-            }
-            if (xx.y > 10) {
-                return;
-            }
             return xx.type;
         }).join('')).join('\n'));
 
@@ -66,27 +59,27 @@ export class Cave {
         let narrow = 0;
         let risk = 0;
 
-        // for (let y = 0; y < 11; y++) {
-        //     for (let x = 0; x < 11; x++) {
-        //         let spot = Cave.Cave[y][x];
-        //         wet += spot.type === "." ? 1 : 0;
-        //         narrow += spot.type === "|" ? 1 : 0;
-        //         rocky += spot.type === "=" ? 1 : 0;
-        //         risk += spot.risk;
-        //     }
-        // }
-        Cave.Cave.forEach((y) => {
-            y.forEach((x) => {
-                let spot = x;
-                if ((spot.y > -1 && spot.y < Cave.Target.y + 1) &&
-                    (spot.x > -1 && spot.x < Cave.Target.x + 1)) {
-                    wet += spot.type === "." ? 1 : 0;
-                    narrow += spot.type === "|" ? 1 : 0;
-                    rocky += spot.type === "=" ? 1 : 0;
-                    risk += spot.risk;
-                }
-            });
-        });
+        for (let y = 0; y < Cave.Target.y + 1; y++) {
+            for (let x = 0; x < Cave.Target.x + 1; x++) {
+                let spot = Cave.Cave[y][x];
+                wet += spot.type === "." ? 1 : 0;
+                narrow += spot.type === "|" ? 1 : 0;
+                rocky += spot.type === "=" ? 1 : 0;
+                risk += spot.risk;
+            }
+        }
+        // Cave.Cave.forEach((y) => {
+        //     y.forEach((x) => {
+        //         let spot = x;
+        //         if ((spot.y > -1 && spot.y < Cave.Target.y + 1) &&
+        //             (spot.x > -1 && spot.x < Cave.Target.x + 1)) {
+        //             wet += spot.type === "." ? 1 : 0;
+        //             narrow += spot.type === "|" ? 1 : 0;
+        //             rocky += spot.type === "=" ? 1 : 0;
+        //             risk += spot.risk;
+        //         }
+        //     });
+        // });
 
         console.log("wet: " + wet + " rocky: " + rocky + " narrow: " + narrow + " risk: " + risk);
         let answer = wet + (narrow * 2);
@@ -121,9 +114,9 @@ export class Cave {
         let val = Cave.Cave[y][x].type
         switch (val) {
             case "=":
-                return 0;
-            case ".":
                 return 1;
+            case ".":
+                return 0;
             default:
                 return 2;
         }
