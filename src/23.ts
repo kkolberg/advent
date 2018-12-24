@@ -1,11 +1,11 @@
 import * as bluebird from 'bluebird';
-import { max } from 'moment';
 
 export interface Bot {
     x: number;
     y: number;
     z: number;
     r: number;
+    touching: number;
 }
 export class Nanos {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
@@ -29,121 +29,34 @@ export class Nanos {
         let mins = Nanos.getMins(input);
         console.log("Max:" + maxes.x + "," + maxes.y + "," + maxes.z);
         console.log("Min:" + mins.x + "," + mins.y + "," + mins.z);
-        let home: Bot = { x: 0, y: 0, z: 0, r: 0 };
+        let home: Bot = { x: 0, y: 0, z: 0, r: 0, touching: 0 };
 
 
-        let bob: { [id: string]: { b: Bot, has: Bot[], within: Bot[] } } = {};
-        input.forEach((b) => {
-            let key = Nanos.key(b);
-            bob[key] = {
-                b, has: [], within: []
-            } as any;
-
-            input.forEach((bb) => {
-                let w = Nanos.getInR(bb, b);
-                let h = Nanos.getInR(b, bb);
-                if (w) {
-                    bob[key].within.push(bb);
-                }
-                if (h) {
-                    bob[key].has.push(bb);
-                }
+        input.forEach((one) => {
+            let touching = 0;
+            input.forEach((two) => {
+                touching += Nanos.Touching(one, two) ? 1 : 0;
             });
+            one.touching = touching;
         });
 
-        let mostWith = { within: [] } as any;
-        let mostHas = { has: [] } as any;
-
-        Object.keys(bob).forEach((k) => {
-            if (bob[k].within.length > mostWith.within.length) {
-                mostWith = bob[k];
-            }
-
-            if (bob[k].has.length > mostHas.has.length) {
-                mostHas = bob[k];
-            }
+        let maxTouching = 0;
+        input.forEach((b) => {
+            maxTouching = b.touching > maxTouching ? b.touching : maxTouching;
         });
 
+        return "max touching: " + maxTouching;
+    }
 
+    public static Touching = (one: Bot, two: Bot): boolean => {
+        let distance = Nanos.dist(one, two);
+        let radiusOne = one.r;
+        let radiusTwo = two.r;
+        if (distance <= radiusOne + radiusTwo) {
+            return true;
+        }
 
-
-        let minWith = { x: Number.MAX_SAFE_INTEGER, y: Number.MAX_SAFE_INTEGER, z: Number.MAX_SAFE_INTEGER };
-        let maxWith = { x: 0, y: 0, z: 0 };
-        let minHas = { x: Number.MAX_SAFE_INTEGER, y: Number.MAX_SAFE_INTEGER, z: Number.MAX_SAFE_INTEGER };
-        let maxHas = { x: 0, y: 0, z: 0 };
-
-        Object.keys(bob).forEach((k) => {
-            if (bob[k].within.length === mostWith.within.length) {
-                let mins = Nanos.getMins(bob[k].within);
-                let maxes = Nanos.getMaxes(bob[k].within);
-                if (mins.x < minWith.x) {
-                    minWith.x = mins.x;
-                }
-                if (mins.y < minWith.y) {
-                    minWith.y = mins.y;
-                }
-                if (mins.z < minWith.z) {
-                    minWith.z = mins.z;
-                }
-
-                if (maxes.x > maxWith.x) {
-                    maxWith.x = maxes.x;
-                }
-                if (maxes.y > maxWith.y) {
-                    maxWith.y = maxes.y;
-                }
-                if (maxes.z > maxWith.z) {
-                    maxWith.z = maxes.z;
-                }
-            }
-
-            if (bob[k].has.length === mostWith.has.length) {
-                let mins = Nanos.getMins(bob[k].has);
-                let maxes = Nanos.getMaxes(bob[k].has);
-                if (mins.x < minHas.x) {
-                    minHas.x = mins.x;
-                }
-                if (mins.y < minHas.y) {
-                    minHas.y = mins.y;
-                }
-                if (mins.z < minHas.z) {
-                    minHas.z = mins.z;
-                }
-
-                if (maxes.x > maxHas.x) {
-                    maxHas.x = maxes.x;
-                }
-                if (maxes.y > maxHas.y) {
-                    maxHas.y = maxes.y;
-                }
-                if (maxes.z > maxHas.z) {
-                    maxHas.z = maxes.z;
-                }
-            }
-        });
-
-        // for (let x = mins.x; x < maxes.x; x++) {
-        //     console.log("starting x: " + x);
-        //     for (let y = mins.y; y < maxes.y; y++) {
-        //         for (let z = mins.z; z < maxes.z; z++) {
-
-        //         }
-        //     } 
-        // }
-        let x = (27759156 - 20636888);
-        let y = (39638478 - 34670845);
-        let z = (20101045 - 17376549);
-
-
-        // maxX = 106976519, 106976519
-        // maxY = 120677168, 95382542
-        // maxZ = 74499123, 99321301
-
-        // minX = -39667998, -68139811
-        // minY = -30976870, -30976870
-        // minZ = -38634244, -61508102
-
-        return maxSpot.x + "," + maxSpot.y + "," + maxSpot.z;
+        return false;
     }
 
     public static dist = (base: Bot, other: Bot): number => {
@@ -202,7 +115,7 @@ export class Nanos {
             let r = Number(parts[1].split("=")[1]);
 
             return {
-                x, y, z, r
+                x, y, z, r, touching: 0
             }
         });
     }
