@@ -1,5 +1,13 @@
 import * as bluebird from 'bluebird';
 
+const AStar = require('a-star');
+
+export interface Person {
+    x: number;
+    y: number;
+    tool: string;
+}
+
 export interface Region {
     geo: number;
     type: string;
@@ -8,15 +16,147 @@ export interface Region {
     y: number;
     risk: number;
 }
+
+export interface Spot {
+    x: number;
+    y: number;
+}
 export class Cave {
     public static fs = bluebird.Promise.promisifyAll(require('fs'));
     public static Target = { x: 12, y: 763 };
-    // public static Target = { x: 10, y: 10 };
+    //    public static Target = { x: 10, y: 10 };
     public static Cave: Region[][] = [];
     public static Depth: number = 7740;
 
-    public static run = async (): Promise<string> => {
-        for (let y = 0; y < Cave.Target.y + 1; y++) {
+
+
+    public static walk = async (): Promise<void> => {
+        Cave.makeCave();
+        await Cave.fs.writeFileAsync("input/Cave.txt", Cave.Cave.map((x) => x.map((xx) => {
+            if (xx.x === 0 && xx.y === 0) {
+                return "M";
+            }
+
+            if (xx.x === Cave.Target.x && xx.y === Cave.Target.y) {
+                return "T";
+            }
+            return xx.type;
+        }).join('')).join('\n'));
+        let person = {
+            x: 0,
+            y: 0,
+            t: "torch"
+        } as any;
+        let p = AStar({
+            start: person,
+            isEnd: (s: Spot) => s.x === Cave.Target.x && s.y === Cave.Target.y,
+            neighbor: (s1: any) => {
+                let options = Cave.getOptions(s1);
+                let mapped: any[] = [];
+                options.forEach((x: any) => {
+                    if (x.x === Cave.Target.x && x.y === Cave.Target.y) {
+                        mapped.push(
+                            {
+                                x: x.x,
+                                y: x.y,
+                                t: "torch"
+                            }
+                        );
+                        return;
+                    }
+
+                    let t = Cave.Cave[x.y][x.x].type;
+                    if (t === ".") {
+                        mapped.push(
+                            {
+                                x: x.x,
+                                y: x.y,
+                                t: "gear"
+                            }
+                        );
+                        mapped.push(
+                            {
+                                x: x.x,
+                                y: x.y,
+                                t: "torch"
+                            }
+                        );
+                    }
+                    if (t === "|") {
+                        mapped.push(
+                            {
+                                x: x.x,
+                                y: x.y,
+                                t: ""
+                            }
+                        );
+                        mapped.push(
+                            {
+                                x: x.x,
+                                y: x.y,
+                                t: "torch"
+                            }
+                        );
+                    }
+                    if (t === "=") {
+                        mapped.push(
+                            {
+                                x: x.x,
+                                y: x.y,
+                                t: ""
+                            }
+                        );
+                        mapped.push(
+                            {
+                                x: x.x,
+                                y: x.y,
+                                t: "gear"
+                            }
+                        );
+                    }
+                });
+                return mapped;
+            },
+            distance: (s1: any, s2: any) => {
+                return s1.t === s2.t ? 1 : 7;
+            },
+            heuristic: (s: any) => {
+                return 0;
+            },
+            hash: (s: any) => s.x + "," + s.y + "," + s.t
+        });
+
+        console.log(p);
+        console.log("size: " + p.path.length)
+    }
+
+    public static getOptions = (person: Spot): Spot[] => {
+        let spots: Spot[] = [];
+        let y = person.y;
+        let x = person.x;
+
+        let match = (o: Spot) => {
+            return o.x === Cave.Target.x && o.y === Cave.Target.y;
+        }
+
+        if (y + 1 < Cave.Target.y + 1 || match({ y: y + 1, x: x })) {
+            spots.push({ x: x, y: y + 1 });
+        }
+        if (x + 1 < Cave.Target.x + 1 || match({ y, x: x + 1 })) {
+            spots.push({ x: x + 1, y: y });
+        }
+        if (x - 1 > -1 || match({ y, x: x - 1 })) {
+            spots.push({ x: x - 1, y: y });
+        }
+
+        if (y - 1 > -1 || match({ y: y - 1, x })) {
+            spots.push({ x: x, y: y - 1 });
+        }
+        return spots;
+    }
+
+    public static makeCave = (): void => {
+        for (let y = 0; y < Cave.Target.y + 100; y++) {
             Cave.Cave.push([{ geo: 0, type: "", erosion: 0, y, x: 0, risk: 0 }]);
             Cave.Cave[y][0].geo = Cave.GeoIndex(0, y);
             Cave.Cave[y][0].erosion = Cave.Erosion(0, y);
@@ -25,7 +165,7 @@ export class Cave {
         }
 
 
-        for (let x = 1; x < Cave.Target.x + 1; x++) {
+        for (let x = 1; x < Cave.Target.x + 100; x++) {
             Cave.Cave[0].push({ geo: 0, type: "", erosion: 0, x, y: 0, risk: 0 });
             Cave.Cave[0][x].geo = Cave.GeoIndex(x, 0);
             Cave.Cave[0][x].erosion = Cave.Erosion(x, 0);
@@ -34,8 +174,8 @@ export class Cave {
 
         }
 
-        for (let y = 1; y < Cave.Target.y + 1; y++) {
-            for (let x = 1; x < Cave.Target.x + 1; x++) {
+        for (let y = 1; y < Cave.Target.y + 100; y++) {
+            for (let x = 1; x < Cave.Target.x + 100; x++) {
                 Cave.Cave[y].push({ geo: 0, type: "", erosion: 0, x, y, risk: 0 });
                 Cave.Cave[y][x].geo = Cave.GeoIndex(x, y);
                 Cave.Cave[y][x].erosion = Cave.Erosion(x, y);
@@ -43,6 +183,10 @@ export class Cave {
                 Cave.Cave[y][x].risk = Cave.Risk(x, y);
             }
         }
+    }
+
+    public static run = async (): Promise<string> => {
+        Cave.makeCave();
         Cave.fs.writeFileAsync("input/Cave.txt", Cave.Cave.map((x) => x.map((xx) => {
             if (xx.x === 0 && xx.y === 0) {
                 return "M";
