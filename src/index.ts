@@ -1,9 +1,9 @@
 import moment from 'moment';
 
-import { Battle } from './24';
+import { Stars } from './25';
 
 let starttime = moment();
-Battle.run().then((result) => {
+Stars.run().then((result) => {
     let endtime = moment();
     console.log("time took: (milliseconds) " + endtime.diff(starttime, "milliseconds").toString());
     console.log("time took: (seconds) " + endtime.diff(starttime, "seconds").toString());
